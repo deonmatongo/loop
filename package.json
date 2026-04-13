@@ -1,0 +1,24 @@
+{
+  "name": "loop",
+  "private": true,
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "build": "pnpm --filter './packages/*' build && pnpm --filter './apps/*' build",
+    "test": "pnpm --recursive test --if-present",
+    "typecheck": "pnpm --recursive typecheck --if-present",
+    "lint": "pnpm --recursive lint --if-present",
+    "db:generate": "pnpm --filter @loop/db generate",
+    "db:migrate:dev": "pnpm --filter @loop/db migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @loop/db migrate:deploy",
+    "db:seed": "pnpm --filter @loop/db seed",
+    "db:studio": "pnpm --filter @loop/db studio"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

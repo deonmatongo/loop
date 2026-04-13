@@ -1,0 +1,39 @@
+app = "loop-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "apps/api/Dockerfile"
+  # Fly builds from repo root so COPY paths in Dockerfile work
+  build_target = "runner"
+
+[env]
+  PORT = "3001"
+  NODE_ENV = "production"
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 3001
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 100
+    soft_limit = 80
+
+  [[services.http_checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+    protocol = "http"
+
+[deploy]
+  release_command = "node -e \"require('./packages/db/dist/index.js').prisma.\$executeRaw\`SELECT 1\`\""

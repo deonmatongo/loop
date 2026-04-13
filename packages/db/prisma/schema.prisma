@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions        Session[]
+  memberships     Membership[]
+  articleVersions ArticleVersion[]
+  auditLogs       AuditLog[]
+
+  @@map("users")
+}
+
+// Lucia v3 requires this exact shape
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ─── TENANCY ──────────────────────────────────────────────────────────────────
+
+model Workspace {
+  id                   String   @id @default(cuid())
+  slug                 String   @unique
+  name                 String
+  plan                 Plan     @default(FREE)
+  stripeCustomerId     String?  @unique
+  stripeSubscriptionId String?  @unique
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  memberships Membership[]
+  articles    Article[]
+  playbooks   Playbook[]
+  auditLogs   AuditLog[]
+
+  @@map("workspaces")
+}
+
+enum Plan {
+  FREE
+  PRO
+}
+
+model Membership {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        Role     @default(VIEWER)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+enum Role {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+// ─── CONTENT ──────────────────────────────────────────────────────────────────
+
+model Article {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  slug         String
+  title        String
+  content      String    @db.Text
+  // tsvector maintained by Postgres trigger — Prisma can't manage this column
+  searchVector Unsupported("tsvector")?
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  workspace     Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  versions      ArticleVersion[]
+  playbookItems PlaybookItem[]
+  completions   PlaybookCompletion[]
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId])
+  @@map("articles")
+}
+
+model ArticleVersion {
+  id            String   @id @default(cuid())
+  articleId     String
+  authorId      String
+  versionNumber Int
+  title         String
+  content       String   @db.Text
+  changeSummary String?
+  createdAt     DateTime @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id])
+
+  @@unique([articleId, versionNumber])
+  @@index([articleId])
+  @@map("article_versions")
+}
+
+// ─── PLAYBOOKS ────────────────────────────────────────────────────────────────
+
+model Playbook {
+  id          String   @id @default(cuid())
+  workspaceId String
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  items       PlaybookItem[]
+  completions PlaybookCompletion[]
+
+  @@index([workspaceId])
+  @@map("playbooks")
+}
+
+model PlaybookItem {
+  id         String   @id @default(cuid())
+  playbookId String
+  articleId  String
+  position   Int
+  createdAt  DateTime @default(now())
+
+  playbook Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  article  Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([playbookId, position])
+  @@unique([playbookId, articleId])
+  @@index([playbookId])
+  @@map("playbook_items")
+}
+
+model PlaybookCompletion {
+  id          String   @id @default(cuid())
+  playbookId  String
+  articleId   String
+  userId      String
+  completedAt DateTime @default(now())
+
+  playbook Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  article  Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([playbookId, articleId, userId])
+  @@index([playbookId, userId])
+  @@map("playbook_completions")
+}
+
+// ─── AUDIT ────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  actorId      String?
+  action       String
+  resourceType String
+  resourceId   String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor     User?     @relation(fields: [actorId], references: [id])
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, resourceType, resourceId])
+  @@map("audit_logs")
+}
