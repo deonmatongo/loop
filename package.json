@@ -15,7 +15,7 @@
     "db:generate": "pnpm --filter @loop/db generate",
     "db:migrate:dev": "pnpm --filter @loop/db migrate:dev",
     "db:migrate:deploy": "pnpm --filter @loop/db migrate:deploy",
-    "db:seed": "pnpm --filter @loop/db seed",
+    "db:seed": "pnpm --filter @loop/api seed",
     "db:studio": "pnpm --filter @loop/db studio"
   },
   "devDependencies": {
