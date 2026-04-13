@@ -1,0 +1,12 @@
+{
+  "buildCommand": "pnpm --filter @loop/shared build && pnpm --filter @loop/web build",
+  "outputDirectory": "apps/web/dist",
+  "installCommand": "pnpm install",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "env": {
+    "VITE_API_URL": "https://loop-api.fly.dev"
+  }
+}
