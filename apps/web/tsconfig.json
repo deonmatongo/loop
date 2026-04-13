@@ -13,6 +13,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "types": ["vite/client"],
     "paths": {
       "@loop/shared": ["../../packages/shared/src/index.ts"]
     }

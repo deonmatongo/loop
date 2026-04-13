@@ -11,6 +11,7 @@ type PlaybookSummary = {
 
 type PlaybookItem = {
   id: string;
+  articleId: string;
   position: number;
   completed: boolean;
   article: { id: string; slug: string; title: string; publishedAt: string | null };
